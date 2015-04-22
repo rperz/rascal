@@ -1080,8 +1080,32 @@ void markdown1(){
 
 /************** math *****************/
 
-void math1(){
-	ex("math1", math("x+\\sqrt{1-x^2}"));
+Figure mmath1 = math("x+\\sqrt{1-x^2}");
+void math1() 
+{
+    ex("math1", mmath1);
+}
+
+Figure mmath2 = math("\\frac{x}{\\sqrt{1-x^2}}");
+void math2() 
+{
+    ex("math2", mmath2);
+}
+
+Figure mmath3 = math("\\mult{x}{\\sqrt{1-x^2}}");
+void math3() 
+{
+    ex("math3", mmath3);
+}
+
+void maths(){
+	ex("maths", grid(gap=<20,20>,align=left, 
+	                 figArray=[
+							[mmath1],
+							[mmath2],
+							[mmath3]
+							
+						  ]));
 }
 
 /************** Interaction *****************/

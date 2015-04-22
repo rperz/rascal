@@ -2,8 +2,8 @@ module experiments::vis2::FigureServer
 
 import experiments::vis2::Figure;
 import experiments::vis2::Translate;
-import util::Webserver;
-import util::HtmlDisplay;
+import util::ReuseWebserver;
+import util::ReuseHtmlDisplay;
 import util::Eval;
 import IO;
 import List;
@@ -50,7 +50,8 @@ res = "\<html\>
         '	\<link rel=\"stylesheet\" href=\"lib/reset.css\" /\>
         '	\<link rel=\"stylesheet\" href=\"lib/Figure.css\" /\>
         
-        '	\<script src=\"http://d3js.org/d3.v3.min.js\" charset=\"utf-8\"\>\</script\>
+        '	\<script src=\"http://d3js.org/d3.v3.min.js\" charset=\"utf-8\"\>
+        '   \</script\>
        
         '   \<!-- GoogleChart --\>
         '   \<script src=\"https://www.google.com/jsapi\"\>\</script\>
@@ -59,7 +60,8 @@ res = "\<html\>
         '	\<script src=\"lib/dagre-d3.js\"\>\</script\>
         
         ' 	\<!-- MathJax --\>
-        ' 	\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>\</script\>
+        ' 	\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>
+        '\</script\>
 
         ' 	\<!-- Markdown.Converter --\>
         '	\<script src=\"lib/MarkdownConverter.js\"\>\</script\>
@@ -77,31 +79,33 @@ res = "\<html\>
 		'\<body\>
 		'	\<div id=\"active\"\>
 		'   \<br\>
-		'	    <for(name <- sort(toList(domain(visualizations)))){> \<a href=\"#\" onclick=\"askServer(\'<getSite()>/initial_figure/<name>\')\"\><name>\</a\>\n   <}>
 		'   \<hr\>
 		'   \</div\>
 		'   \<div id=\"figurearea\"\>
 		'   \</div\>
+		'	    <for(name <- sort(toList(domain(visualizations)))){> \<script\> askServer(\'<getSite()>/initial_figure/<name>\');\n\</script\>\n   <}>
 		'\</body\>
 		'\</html\>
 		";
 	// println(res);
 	return response(res);
 }
+//'	    <for(name <- sort(toList(domain(visualizations)))){> \<a href=\"#\" onload=\"askServer(\'<getSite()>/initial_figure/<name>\')\"\><name>\</a\>\n   <}>
+
 
 Response page(post(), /^\/initial_figure\/<name:[a-zA-Z0-9_]+>/, map[str, str] parameters) {
-	// println("post: initial_figure: <name>, <parameters>");
-	// println(get_initial_figure(name));
+	println("post: initial_figure: <name>, <parameters>");
+	println(get_initial_figure(name));
 	return response(get_initial_figure(name));
 }
 
 Response page(get(), /^\/initial_figure\/<name:[a-zA-Z0-9_]+>/, map[str, str] parameters) {
-	// println("get: initial_figure: <name>, <parameters>");
+	println("get: initial_figure: <name>, <parameters>");
 	return response(get_initial_figure(name));
 }
 
 Response page(post(), /^\/refresh\/<name:[a-zA-Z0-9_]+>/, map[str, str] parameters) {
-	// println("post: refresh: <name>, <parameters>");
+	println("post: refresh: <name>, <parameters>");
 	return response(refresh(name, parameters["model"], parameters["event"],parameters["utag"]));
 }
 
@@ -127,7 +131,7 @@ private loc startFigureServer() {
   while (true) {
     try {
       //println("Trying ... <site>");
-      serve(site, dispatchserver(page1));
+      serve(site, dispatchserver(page));
       return site;
     }  
     catch IO(_): {
@@ -151,7 +155,7 @@ public void render(str name, type[&T] model_type, &T model, Figure (str event, s
 }
 
 public void render(str name, type[&T] model_type, &T model, Figure (str event, str utag, &T model) visualize, &T (&T model) transform){
-    // println("render: <model_type> <trCursor(makeCursor(model))>");
+    println("render: <model_type> <trCursor(makeCursor(model))>");
 	f = visualize("init", "all", makeCursor(model));
 	visualizations[name] = descriptor(name, model_type, model, visualize, transform, f);
 	println("render:<getSite()>");
