@@ -76,6 +76,7 @@ str getIntro() {
         '\</style\>    
         '\<script src=\"IFigure.js\"\>\</script\>
         '\<script src=\"http://d3js.org/d3.v3.min.js\" charset=\"utf-8\"\>\</script\>  
+        '	\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>
         '\<script\>
         '  function doFunction(id) {
         '    return function() {
@@ -381,6 +382,33 @@ IFigure _rect(str id, Figure f,  IFigure fig = iemptyFigure()) {
            }
        return ifigure(id, [fig]);
        } 
+
+IFigure _math(str id, Figure f, str s) {
+    str begintag="\<div  id=\"<id>\"\>";
+    int width = f.width;
+    int height = f.height;
+    Alignment align =  width<0?topLeft:f.align;
+    str endtag = "\</div\>"; 
+    widget[id] = <null, seq, id, begintag, endtag, 
+        "
+        'd3.select(\"#<id>\")
+        '<debugStyle()>
+        '<style("background-color", "<f.fillColor>")>
+        '<stylePx("width", width)><stylePx("height", height)>
+        '<stylePx("font-size", f.fontSize)>
+        '<style("font-style", f.fontStyle)>
+        '<style("font-family", f.fontFamily)>
+        '<style("font-weight", f.fontWeight)>
+        '<style("color", f.fontColor)>
+        '.text(\"<s>\") 
+        ';"
+        , width, height, f.cellWidth, f.cellHeight, align, f.hgap, f.vgap >;
+         seq=seq+1;
+       state += <id, f.fillColor>;
+       old+=f.fillColor;
+       widgetOrder+= id;
+       return ifigure(id, []);
+    }
        
 str vAlign(Alignment align) {
        if (align == bottomLeft || align == bottomMid || align == bottomRight) return "valign=\"bottom\"";
@@ -545,7 +573,9 @@ IFigure _translate(Figure f) {
         case circle():  return _ellipse(f.id, f, fig = _translate(f.fig));
         case text(value s): {if (str t:=s) return _text(f.id, f, t);
                             return iemptyFigure();
-                            }                 
+                            }       
+        case math(value s): {if (str t:=s) return _math(f.id, f, t);
+                            return iemptyFigure();                                    
         case hcat(): return _hcat(f.id, f, [_translate(q)|q<-f.figs]);
         case vcat(): return _vcat(f.id, f, [_translate(q)|q<-f.figs]);
         case grid(): return _grid(f.id, f, figArray= [[_translate(q)|q<-e]|e<-f.figArray]);

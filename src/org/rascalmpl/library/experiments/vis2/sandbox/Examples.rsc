@@ -263,6 +263,9 @@ void texts(){
 						  ]), debug = false);
 }	
 
+public Figure math1 = math("\\sum_{i=1}^{10} i");
+void mmath(){ ex("math1", math1); }
+
 
 
 public void main() {

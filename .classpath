@@ -16,7 +16,7 @@
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry exported="true" kind="lib" path="lib/jdom-2.0.6.jar"/>
+	<classpathentry kind="lib" path="C:/Scriptie/jdom-2.0.6/jdom-2.0.6.jar"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

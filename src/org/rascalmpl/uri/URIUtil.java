@@ -262,6 +262,7 @@ public class URIUtil {
 		File childFile = new File(file, child);
 		
 		try {
+
 			return vf.sourceLocation(loc.getScheme(), getCorrectAuthority(loc), childFile.getPath(), loc.hasQuery() ? loc.getQuery() : null, loc.hasFragment() ? loc.getFragment() : null);
 		} catch (URISyntaxException e) {
 			assert false;
