@@ -575,7 +575,21 @@ IFigure _math(str id, Figure f, str s) {
     str endtag = "\</div\>"; 
     widget[id] = <null, seq, id, begintag, endtag, 
         "
-        'd3.select(\"#<id>\")
+        '<getMathPreview(id, f, s)>
+        '<getMathBuffer(id, f, s)>
+        ' " 
+        , getTextWidth(f, s), getTextHeight(f), 0, 0, align, f.lineWidth, f.lineColor >;
+         seq=seq+1;
+       state += <id, f.fillColor>;
+       old+=f.fillColor;
+       widgetOrder+= id;
+       return ifigure(id, []);
+    }
+
+str getMathBuffer(str id, Figure f, str s)
+{
+    str buffer = "
+        'd3.select(\"#<id>_Buffer\")
         '<debugStyle()>
         '<style("background-color", "<f.fillColor>")>
         '<stylePx("width", width)><stylePx("height", height)>
@@ -585,21 +599,33 @@ IFigure _math(str id, Figure f, str s) {
         '<style("font-weight", f.fontWeight)>
         '<style("color", f.fontColor)>
         '<style("visibility", "hidden")>
+        '<style("position", "absolute")>
         '.text(\"<s>\") 
         ';
-        'var math = document.getElementById(<id>);
-        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math], [function() {
-        ' d3.select(\"#<id>\")
-        '<style("visibility", "visible")>}]);
-        ' "
-        , getTextWidth(f, s), getTextHeight(f), 0, 0, align, f.lineWidth, f.lineColor >;
-         seq=seq+1;
-       state += <id, f.fillColor>;
-       old+=f.fillColor;
-       widgetOrder+= id;
-       return ifigure(id, []);
-    }
-    
+        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math]);
+    return buffer;
+}
+
+str getMathPreview(str id, Figure f, str s)
+{
+    str preview = "
+        'd3.select(\"#<id>_Preview\")
+        '<debugStyle()>
+        '<style("background-color", "<f.fillColor>")>
+        '<stylePx("width", width)><stylePx("height", height)>
+        '<stylePx("font-size", f.fontSize)>
+        '<style("font-style", f.fontStyle)>
+        '<style("font-family", f.fontFamily)>
+        '<style("font-weight", f.fontWeight)>
+        '<style("color", f.fontColor)>
+        '<style("visibility", "hidden")>
+        '<style("position", "absolute")>
+        '.text(\"<s>\") 
+        ';
+        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math]);
+        ' ";
+    return preview;
+}
        
 int corner(Figure f) {
      return corner(f.n, f.lineWidth);
