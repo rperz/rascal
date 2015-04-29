@@ -17,14 +17,9 @@ import lang::rascal::types::CheckerConfig;
 import lang::rascal::types::AbstractName;
 import lang::rascal::types::AbstractType;
 
-alias KeywordParamMap = map[RName kpName, Symbol kpType]; // TODO: duplicate of CheckerConfig!!!!
-//data AbstractValue 
-//    = 
-//      datatype(RName name, Symbol rtype, int containedIn, set[loc] ats)
-//    | sorttype(RName name, Symbol rtype, int containedIn, set[loc] ats)
-//    
-//    ;
-//    // end duplicate
+import experiments::Compiler::Rascal2muRascal::TypeReifier;
+
+//alias KeywordParamMap = map[RName kpName, Symbol kpType]; // TODO: duplicate of CheckerConfig!!!!
 
 //import experiments::Compiler::Rascal2muRascal::RascalType;
 
@@ -674,6 +669,20 @@ str getPUID(str pname, Symbol \type) = "<\type.\sort>::<pname>(<for(p <-\type.pa
 str getPUID(str modName, str pname, Symbol \type) = "<modName>/<\type.\sort>::<pname>(<for(p <-\type.parameters){><getField(p)>;<}>)";
 
 
+@doc{Generates a unique scope id: non-empty 'funNames' list implies a nested function}
+/*
+ * NOTE: Given that the muRascal language does not support overloading, the dependency of function uids 
+ *       on the number of formal parameters has been removed 
+ */
+str getUID(str modName, lrel[str,int] funNames, str funName, int nformals) {
+	// Due to the current semantics of the implode
+	modName = replaceAll(modName, "::", "");
+	return "<modName>/<for(<f,n> <- funNames){><f>(<n>)/<}><funName>"; 
+}
+str getUID(str modName, [ *tuple[str,int] funNames, <str funName, int nformals> ]) 
+	= "<modName>/<for(<f,n> <- funNames){><f>(<n>)/<}><funName>";
+
+
 str getCompanionForUID(UID uid) = uid2str[uid] + "::companion";
 
 str qualifiedNameToPath(QualifiedName qname){
@@ -935,7 +944,7 @@ Symbol translateType(t : (Type) `<StructuredType structured>`)  = translateType(
 Symbol translateType(t : (Type) `<BasicType basic>`)  = translateType(basic);
 Symbol translateType(t : (Type) `<DataTypeSelector selector>`)  { throw "DataTypeSelector"; }
 Symbol translateType(t : (Type) `<TypeVar typeVar>`) = translateType(typeVar);
-Symbol translateType(t : (Type) `<Sym symbol>`)  = sym2symbol(symbol); //insertLayout(sym2symbol(symbol));	// make sure concrete lists have layout defined
+Symbol translateType(t : (Type) `<Sym symbol>`)  = insertLayout(sym2symbol(symbol));	// make sure concrete lists have layout defined
 
 Symbol translateType(t : (TypeArg) `<Type tp>`)  = translateType(tp);
 Symbol translateType(t : (TypeArg) `<Type tp> <Name name>`) = \label(getSimpleName(convertName(name)), translateType(tp));
