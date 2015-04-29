@@ -33,7 +33,7 @@ public class ReifiedType extends RascalType {
 		this.arg = arg;
 	}
 	
-	@Override
+	//@Override
 	public Type asAbstractDataType() {
 		return Factory.Type;
 	}

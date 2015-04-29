@@ -1,8 +1,8 @@
 module experiments::vis2::sandbox::IFigure
 import Prelude;
-import util::Webserver;
+import util::ReuseWebserver;
 import lang::json::IO;
-import util::HtmlDisplay;
+import util::ReuseHtmlDisplay;
 import util::Math;
 import experiments::vis2::sandbox::Figure;
 // '<style("border","<f.lineWidth<0?1:f.lineWidth>px solid <f.lineColor>")>
@@ -77,7 +77,7 @@ str getIntro() {
         '\</style\>    
         '\<script src=\"IFigure.js\"\>\</script\>
         '\<script src=\"http://d3js.org/d3.v3.min.js\" charset=\"utf-8\"\>\</script\>  
-        '	\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>
+        '\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>\</script\>  
         '\<script\>
         '  function doFunction(id) {
         '    return function() {
@@ -584,15 +584,22 @@ IFigure _math(str id, Figure f, str s) {
         '<style("font-family", f.fontFamily)>
         '<style("font-weight", f.fontWeight)>
         '<style("color", f.fontColor)>
+        '<style("visibility", "hidden")>
         '.text(\"<s>\") 
-        ';"
-        , width, height, f.cellWidth, f.cellHeight, align, f.hgap, f.vgap >;
+        ';
+        'var math = document.getElementById(<id>);
+        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math], [function() {
+        ' d3.select(\"#<id>\")
+        '<style("visibility", "visible")>}]);
+        ' "
+        , getTextWidth(f, s), getTextHeight(f), 0, 0, align, f.lineWidth, f.lineColor >;
          seq=seq+1;
        state += <id, f.fillColor>;
        old+=f.fillColor;
        widgetOrder+= id;
        return ifigure(id, []);
     }
+    
        
 int corner(Figure f) {
      return corner(f.n, f.lineWidth);
@@ -998,7 +1005,7 @@ IFigure _translate(Figure f, Alignment align = <0.5, 0.5>) {
         case text(value s): {if (str t:=s) return _text(f.id, f, t, align = align);
                             return iemptyFigure();
                             }       
-        case math(value s): {if (str t:=s) return _text(f.id, f, t);
+        case math(value s): {if (str t:=s) return _math(f.id, f, t);
                             return iemptyFigure();
                             }                                                    
         case hcat(): return _hcat(f.id, f, [_translate(q, align = f.align)|q<-f.figs], align = align);

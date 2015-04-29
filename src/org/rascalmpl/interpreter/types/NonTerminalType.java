@@ -52,7 +52,7 @@ public class NonTerminalType extends RascalType {
 		this(Symbols.typeToSymbol(type, lex, layout));
 	}
 	
-    @Override
+   // @Override
     public Type asAbstractDataType() {
     	return Factory.Tree;
     }
