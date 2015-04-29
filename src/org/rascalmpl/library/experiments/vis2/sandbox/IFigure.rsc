@@ -574,8 +574,9 @@ IFigure _translate(Figure f) {
         case text(value s): {if (str t:=s) return _text(f.id, f, t);
                             return iemptyFigure();
                             }       
-        case math(value s): {if (str t:=s) return _math(f.id, f, t);
-                            return iemptyFigure();                                    
+        case math(value s): {if (str t:=s) return _text(f.id, f, t);
+                            return iemptyFigure();
+                            }                                    
         case hcat(): return _hcat(f.id, f, [_translate(q)|q<-f.figs]);
         case vcat(): return _vcat(f.id, f, [_translate(q)|q<-f.figs]);
         case grid(): return _grid(f.id, f, figArray= [[_translate(q)|q<-e]|e<-f.figArray]);
