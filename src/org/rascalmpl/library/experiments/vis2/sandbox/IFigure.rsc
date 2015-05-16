@@ -15,7 +15,7 @@ public data IFigure = ifigure(str content);
 
 public data IFigure = iemptyFigure();
 
-
+bool firstMath = true;
 bool debug = true;
 int screenWidth = 400;
 int screenHeight = 400;
@@ -23,15 +23,23 @@ int screenHeight = 400;
 int seq = 0;
 int occur = 0;
 
+str currentJSON ="";
+str oldJSON ="";
 
 alias Elm = tuple[void(str, str) f, int seq, str id, str begintag, str endtag, str script, int width, int height,
       int x, int y, 
       Alignment align, int lineWidth, str lineColor];
 
-
+alias MathState = tuple[str id, str formula];
 alias State = tuple[str name, str v];
+
 public list[State] state = [];
+
 public list[str] old = [];
+
+public void setFirstMath(bool b) {
+   firstMath = b;
+   }
 
 public void setDebug(bool b) {
    debug = b;
@@ -53,7 +61,7 @@ public list[str] widgetOrder = [];
 
 public list[str] adjust = [];
 
-public void clearWidget() { widget = (); widgetOrder = [];}
+public void clearWidget() { widget = (); widgetOrder = []; setFirstMath(true);}
               
 str visitFig(IFigure fig) {
     if (ifigure(str id, list[IFigure] f):= fig) {
@@ -76,12 +84,12 @@ str getIntro() {
         
         '\</style\>    
         '\<script src=\"IFigure.js\"\>\</script\>
-        '\<script src=\"http://d3js.org/d3.v3.min.js\" charset=\"utf-8\"\>\</script\>  
-        '\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>\</script\>  
-        '\<script\>
+        '\<script src=\"jquery-2.1.4.min.js\"\>\</script\>
+        '\<script src=\"d3.min.js\" charset=\"utf-8\"\>\</script\>  
+        '<getMathIntro()>              
         '  function doFunction(id) {
         '    return function() {
-        '    askServer(\"<getSite()>/getValue/\"+id, {},
+        '    askServer(\"/getValue/\"+id, {},
         '            function(t) {
         '                  for (var d in t) {
         '                   var e = d3.select(\"#\"+d); 
@@ -92,40 +100,107 @@ str getIntro() {
         '   };
         ' }
        ' function initFunction() {
+       '   console.log(\"Running init\");
            <for (d<-reverse(widgetOrder)) {> <widget[d].script> <}>
-           <for (d<-adjust) {> <d> <}>
+           console.log(\"Widgets created\");
+           <for (d<-adjust) {> <d> <}>   
+           console.log(\"Pushing to queue\");      
+       '   QUEUE.Push([function() { var figureheight = d3.select(\"body\").style(\"height\"); d3.select(\"body\").style(\"height\", figureheight); } ]);
+
        ' }
-       ' onload=initFunction;
+       $(document).ready(function () {
+		window.setTimeout( initFunction(), 0 );
+		});
        '\</script\>
        '\</head\>
-       '\<body\>
+       '\<body height=\"400px\" width=\"400px\"\>
        ' <visitFig(fig)>      
        '\</body\>     
 		'\</html\>
 		";
-    println(res);
 	return res;
 	}
 
+str getMathIntro()
+{
+	return "
+	    '\<script type=\"text/x-mathjax-config\"\>
+		'  MathJax.Hub.Config({
+		'    showProcessingMessages: true
+		'  });
+		'\</script\>
+        '\<script src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_SVG\"\>\</script\>  
+        '\<script\>
+	    'var QUEUE = MathJax.Callback.Queue();
+		'function updateMath(math_currentId, math_lastId) {    
+	    'QUEUE.Push([function() { 
+	        'console.log(\" asking server for update \");
+	        'askServer(\"<getSite()>/updateMath/test\", {},
+            '            function(t) {
+            					if(t.length == 0 || t === undefined) { 
+            					   QUEUE.Push([function() { setTimeout(function() { updateMath(math_lastId, math_currentId); }, 250); }]);
+            					   return;
+            					}
+            '					var maths = d3.select(\"#\" + math_currentId);
+            '					maths.selectAll(\"div\").remove();		
+            '                   maths = maths.selectAll(\"div\").data(t, function(d, i) { return d.id; });
+            '					maths.enter().append(\"div\") 
+			'                   .attr(\"id\", function(d) { return d.id + \"-\" + math_currentId; })
+			'                   .text(function(d) { if(d === undefined) { return \"\"; }  return \"\\\\[\"+ d.formula.replace(\'/\\\\\\\\/g\', \'\\\\\') +\"\\\\]\" ; });    
+			'                   maths.exit().remove();
+            '                   QUEUE.Push([\"Typeset\",MathJax.Hub, \"figureArea\"]);
+            '                   QUEUE.Push([function() { d3.select(\"#\"+math_currentId)<style("position", "relative")><style("top", "auto")><style("left", "auto")><style("visibility", "visible")>; }]);
+            '                   QUEUE.Push([function() {d3.select(\"#\"+math_lastId)<style("position", "absolute")><style("top", "0")><style("left", "0")><style("visibility", "hidden")>; }]);	
+            '                   QUEUE.Push([function() { setTimeout(function() { updateMath(math_lastId, math_currentId); }, 250); }]);		          
+            });
+            '   }]); 
+	    '
+        '}
+        '";
+        //  
+}
+
 Response page(get(), /^\/$/, map[str,str] _) { 
+	str rest = getIntro();
 	return response(getIntro());
 }
 
 list[State] diffNewOld() {
     return [state[i]|i<-[0..size(state)], state[i].v!=old[i]];
     }
+    
 
-Response page(post(), /^\/getValue\/<name:[a-zA-Z0-9_]+>/, map[str, str] parameters) {
-	// println("post: getValue: <name>, <parameters>");
-	widget[name].f("click", name);
+Response page(post(), /^getValue\/<name:[a-zA-Z0-9_]+>/, map[str, str] parameters) {
+	//widget[name].f("click", name);
 	list[State] changed = diffNewOld();
 	str res = toJSON(toMap(changed), true);
 	old = [s.v|s<-state];
 	return response("<res>");
 }
 
+// this returns a json object with the changed math equations
+Response page(post(), /^\/?updateMath\/<name:[a-zA-Z0-9_\-#]+>/, map[str, str] parameters) {
+	//widget[name].f("click", name);
+	//println("updateMath found in <path>");
+	res = "";
+	if(oldJSON != currentJSON)
+	{
+		res = currentJSON;	
+		oldJSON = currentJSON;		
+	}	
+	else
+	{
+		res = toJSON("", true);
+	}
+	Response ret = response("<res>");
+	return ret;
+}
+
+default Response page(post(), str path, map[str, str] parameters) {
+   return response(path); 
+   }
+
 default Response page(get(), str path, map[str, str] parameters) {
-   // println("File response: <base+path>");
    return response(base + path); 
    }
 
@@ -154,6 +229,7 @@ public void _render(IFigure fig1, int width = 400, int height = 400,
      Alignment align = centerMid, int lineWidth = 0, int lineColor = 0,
      str fillColor = "none", str lineColor = "black")
      {
+
      screenWidth = width;
      screenHeight = height;
      str id = "figureArea";
@@ -174,7 +250,7 @@ public void _render(IFigure fig1, int width = 400, int height = 400,
        widgetOrder += id;
     fig = ifigure(id, [fig1]);
     println("site=<site>");
-	htmlDisplay(site);
+	//htmlDisplay(site);
 }
 
 str getId(IFigure f) {
@@ -256,6 +332,11 @@ str style(str key, int v) {
     if (v<0) return "";
     return ".style(\"<key>\",\"<v>\")";
     }
+
+str databind(str json, str identityFunction)
+{
+	return ".data(JSON.parse(<json>), <identityFunction>";
+}
 
 str stylePx(str key, int v) {
     if (v<0) return "";
@@ -568,49 +649,94 @@ str extraCircle(str id, Figure f) {
        } 
 
 IFigure _math(str id, Figure f, str s) {
-    str begintag="\<div  id=\"<id>\"\>";
+    str begintag="\<div id=\"<id>\" style=\"position: relative\"\>";
     int width = f.width;
     int height = f.height;
     Alignment align =  width<0?topLeft:f.align;
     str endtag = "\</div\>"; 
     widget[id] = <null, seq, id, begintag, endtag, 
         "
-        '<getMathPreview(id, f, s)>
-        '<getMathBuffer(id, f, s)>
+        '<getMathPreview(id, f, s, width, height)>
+        '<getMathBuffer(id, f, s, width, height)>
         ' " 
-        , getTextWidth(f, s), getTextHeight(f), 0, 0, align, f.lineWidth, f.lineColor >;
+        , width, height, 0, 0, align, f.lineWidth, f.lineColor >;
          seq=seq+1;
        state += <id, f.fillColor>;
+       //mathState += <id, s>;
        old+=f.fillColor;
        widgetOrder+= id;
        return ifigure(id, []);
     }
+    
+IFigure _maths(str id, Figure f, str json) {
+    str begintag="\<div id=\"<id>\" style=\"position: relative\"\>\<div id=\"<id>-Buffer\"\>";
+    int width = f.width;
+    int height = f.height;
+    Alignment align =  width<0?topLeft:f.align;
+    str endtag = "\</div\>\<div id=\"<id>-Preview\"\>\</div\>\</div\>"; 
+    widget[id] = <null, seq, id, begintag, endtag, 
+        "
+        ' console.log(\"Init maths preview\");  
+        '<getMathPreview(id, f, json, width, height)>
+        'console.log(\"Init maths buffer\"); 
+        '<getMathBuffer(id, f, json, width, height)>
+        '   QUEUE.Push([function() {setTimeout(function() { updateMath(\"<id>-Buffer\", \"<id>-Preview\"); }, 250);  }]);         
+        ' " 
+        , width, height, 0, 0, align, f.lineWidth, f.lineColor >;
+         seq=seq+1;
+       state += <id, f.fillColor>;
+       currentJSON = json;
+       old+=f.fillColor;
+       widgetOrder+= id;
+       return ifigure(id, []);
+    }   
+    
+    //
 
-str getMathBuffer(str id, Figure f, str s)
+str getMathBuffer(str id, Figure f, str json, int width, int height)
 {
     str buffer = "
-        'd3.select(\"#<id>_Buffer\")
-        '<debugStyle()>
+                 'console.log(\"Selecting the buffer\"); 
+				 'var MATHS_BUFFER = d3.select(\"#<id>-Buffer\").selectAll(\"div\").data(<json>, function(d, i) { console.log(\"indexing on \" +d.id); return d.id; })
+				 'console.log(\"Added databinding\");
+				 'MATHS_BUFFER.enter().append(\"div\");
+				 'console.log(\"Created divs\");
+				 'MATHS_BUFFER.attr(\"id\",function(d) { return d.id + \"-<id>-Buffer\"; })
+        		 '.text(function(d) { return \"\\\\[\"+ d.formula.replace(\'/\\\\\\\\/g\', \'\\\\\') +\"\\\\]\" ; }) 	
+				 '<debugStyle()>
         '<style("background-color", "<f.fillColor>")>
         '<stylePx("width", width)><stylePx("height", height)>
         '<stylePx("font-size", f.fontSize)>
-        '<style("font-style", f.fontStyle)>
+        '<style("fontl-style", f.fontStyle)>
         '<style("font-family", f.fontFamily)>
         '<style("font-weight", f.fontWeight)>
         '<style("color", f.fontColor)>
-        '<style("visibility", "hidden")>
-        '<style("position", "absolute")>
-        '.text(\"<s>\") 
         ';
-        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math]);
+        'd3.select(\"#<id>-Buffer\")
+        '<style("visibility", "hidden")>     
+        '<style("position", "absolute")>    
+        '<style("top", "0")>    
+        '<style("left", "0")>;    
+        'QUEUE.Push([\"Typeset\",MathJax.Hub,\"<id>-Buffer\"]);   
+		'"			
+;
+      //  '.text(\"\\\\[<s>\\\\]\") 
     return buffer;
 }
 
-str getMathPreview(str id, Figure f, str s)
+str getMathPreview(str id, Figure f, str json, int width, int height)
 {
     str preview = "
-        'd3.select(\"#<id>_Preview\")
-        '<debugStyle()>
+                 'console.log(\"parsing JSON\");
+                 'var obj = <json>;
+                 'console.log(\"Selecting the buffer\"); 
+				 'var MATHS_PREVIEW = d3.select(\"#<id>-Preview\").selectAll(\"div\").data(obj, function(d, i) { console.log(\"indexing on \" +d.id); return d.id; });
+				 'console.log(\"Added databinding\");
+				 'MATHS_PREVIEW.enter().append(\"div\");
+				 'console.log(\"Created divs\");
+				 'MATHS_PREVIEW.attr(\"id\",function(d) { return d.id + \"-<id>-Preview\"; })
+        		 '.text(function(d) { return \"\\\\[\"+ d.formula.replace(\'/\\\\\\\\/g\', \'\\\\\') +\"\\\\]\" ; }) 				 
+				 '<debugStyle()>
         '<style("background-color", "<f.fillColor>")>
         '<stylePx("width", width)><stylePx("height", height)>
         '<stylePx("font-size", f.fontSize)>
@@ -618,14 +744,17 @@ str getMathPreview(str id, Figure f, str s)
         '<style("font-family", f.fontFamily)>
         '<style("font-weight", f.fontWeight)>
         '<style("color", f.fontColor)>
-        '<style("visibility", "hidden")>
-        '<style("position", "absolute")>
-        '.text(\"<s>\") 
         ';
-        'MathJax.Hub.Queue([\"Typeset\",MathJax.Hub,math]);
-        ' ";
+		'd3.select(\"#<id>-Preview\")        
+        '<style("visibility", "hidden")>
+        '<style("position", "relative")>;        
+        'QUEUE.Push([\"Typeset\",MathJax.Hub,\"<id>-Preview\"]);
+        'QUEUE.Push([function() { d3.select(\"#<id>-Preview\")<style("visibility", "visible")>; }]);
+		'"
+;
     return preview;
 }
+
        
 int corner(Figure f) {
      return corner(f.n, f.lineWidth);
@@ -974,7 +1103,8 @@ IFigure _grid(str id, Figure f, list[list[IFigure]] figArray=[[]]) {
         '<debugStyle()>       
         '<style("background-color", "<f.fillColor>")>  
         '<hGap(f.align, f.hgap)>  
-        '<vGap(f.align, f.vgap)>  
+        '<vGap(f.align, f.vgap)> 
+        '; 
         ", f.width, f.height, getAtX(f), getAtY(f), f.align, f.lineWidth, f.lineColor >;
        seq=seq+1;
        state += <id, f.fillColor>;
@@ -1033,7 +1163,12 @@ IFigure _translate(Figure f, Alignment align = <0.5, 0.5>) {
                             }       
         case math(value s): {if (str t:=s) return _math(f.id, f, t);
                             return iemptyFigure();
-                            }                                                    
+                            }
+        case maths(value s): {if (list[map[str, value]] t:=s) {
+                              return _maths(f.id, f, toJSON(t, true));
+                            }
+                            return iemptyFigure();
+                            }                                                                                         
         case hcat(): return _hcat(f.id, f, [_translate(q, align = f.align)|q<-f.figs], align = align);
         case vcat(): return _vcat(f.id, f, [_translate(q, align = f.align)|q<-f.figs], align = align);
         case overlay(): return _overlay(f.id, f, [_translate(q)|q<-f.figs]);
@@ -1049,14 +1184,17 @@ public void _render(Figure fig1, int width = 400, int height = 400,
      Alignment align = centerMid, tuple[int, int] size = <0, 0>,
      str fillColor = "white", str lineColor = "black")
      {
-        
         id = 0;
+        seq = 0;
+        occur = 0;
         screenHeight = height;
         screenWidth = width;
         if (size != <0, 0>) {
             screenWidth = size[0];
             screenHeight = size[1];
          }
+        oldJSON = currentJSON;
+        currentJSON = "";
         println("clearWidget <screenWidth> <screenHeight>");
         clearWidget();
         IFigure f = _translate(fig1, align = align);

@@ -163,7 +163,7 @@ public data Figure(
    | text(value text)		    			// text label
    | markdown(value text)					// text with markdown markup (TODO: make flavor of text?)
    | math(value text)						// text with latex markup
-   
+   | maths(value text)						// text with latex markup   
 // Graphical elements
 
    | box(Figure fig=emptyFigure())      	// rectangular box with inner element

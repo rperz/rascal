@@ -77,6 +77,8 @@ Handler fileserver(loc root) =
 Handler dispatchserver(Response (Method, str, map[str,str]) router) =
   Response (loc uri, Method method, map[str, str] headers, map[str, str] ps,  map[str, str] uploads) {
     try {
+      println("Looking for <uri.path>");
+      println("Using method <method>");
       return router(method, uri.path, ps);
     } catch value e : {
       return response(notFound(), "<uri.path> failed, due to <e>");

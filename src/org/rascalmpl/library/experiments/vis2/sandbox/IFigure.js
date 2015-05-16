@@ -56,7 +56,7 @@ ajax.post = function(url, data, callback, sync) {
 function askServer(path, parameters, callback) {
 	ajax.post(path, parameters, function(responseText){
 		try { 
-            var res = JSON.parse(responseText);      
+            var res = JSON.parse(responseText);
             callback(res);
         } catch (e) {
             alert(e.message + ", on figure " + responseText);
